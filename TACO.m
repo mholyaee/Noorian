@@ -1,10 +1,7 @@
-function []=THGACO()
-% Improving note: several selected users as similar users are in cold
-% state.
+function []=TACO()
 % Parameters
 teta=0.63;% Based on the paper (Page 13, First paragraph)
-k_EndUser=20;
-F_Dmax=1;
+k_EndUser=10;
 [datafile,path]=uigetfile('D:\My Research\My projects\MSNoorian\1_SourceCode\*.txt','Select Dataset');
 [trustfile,~]=uigetfile('D:\My Research\My projects\MSNoorian\1_SourceCode\*.txt','Select Dataset');
 datafile=[path,datafile];
@@ -44,14 +41,8 @@ TargetUser=1444;
 Degree=sum(TrustNetwork()'~=0);
 AvgDegree=mean(Degree);
 [AllU,~]=size(TrustNetwork);
+Dmax=log(AllU)/log(AvgDegree);% equal to the average path length of the graph as
 tempdis=graphallshortestpaths(Sp_Trust);
-tempdis2=tempdis;
-tempdis2(isinf(tempdis2))=0;
-if F_Dmax==0
-    Dmax=log(AllU)/log(AvgDegree);% equal to the average path length of the graph as
-else
-    Dmax=max(max(tempdis2))*2;
-end
 DisTargetUser=tempdis(:,TargetUser);% Trust distance to target user
 T_a_u=(Dmax-DisTargetUser+1)/Dmax;
 T_a_u(isinf(T_a_u))=0;% Is it true. based on the commands in lines 75-82
@@ -98,60 +89,59 @@ neighbors=find(W_a_u>=teta);
 nF=length(neighbors);
 nb_RatingMatrix=RatingMatrix(neighbors,:);
 nb_TrustNetwork=TrustNetwork(neighbors,:);
-%% Hypergraph section
- K=5;  %  parameter k in the SkNN, one can change it.
- C=2;   %  parameter cs the support count threshold, one can change it.
- RNNname=KNN2(neighbors,RatingMatrix,TrustNetwork,K,tempdis);
- system(['fpgrowth.exe -tm -s-',num2str(C),' ',RNNname,' ',RNNname,'.out']); %Call an external executable file fpgrowth.exe
- fid_RNNout=fopen([RNNname,'.out'],'r');
- fid_graph=fopen(['neighbors','.Graph'],'w+');
- fprintf(fid_graph,'                             \n');
- NUMedge=0;
- while ~feof(fid_RNNout)
-     tline=fgetl(fid_RNNout);
-     if tline==-1
-         return;
-     end
-     index=strfind(tline,'(');
-     newtline=[tline(index+1:end-1),' ',tline(1:index-2),'\n'];
-     fprintf(fid_graph,newtline);
-     NUMedge=NUMedge+1;
- end
- frewind(fid_graph);% set pointer to the start of the file
- fprintf(fid_graph,'%d %d 1',NUMedge,nF);%%% check
- fclose(fid_RNNout);
- fclose(fid_graph);
- Nparts=k_EndUser;% #############Number of partitions###############
- UBfactor=1;
- Nruns=10;  %default:10 range:1...10
- CType=5;   %default:1  range:1...5
- RType=3;   %default:1  range:1...3
- Vcycle=1;  %default:1  range:1...3
- Reconst=0; %default:0  range:0...1
- dbglvl=0; %range:0 or 24
- system(['hmetis ','neighbors','.Graph ',num2str(Nparts),' ',num2str(UBfactor),' ',num2str(Nruns),' ',num2str(CType),' ',num2str(RType),' ',num2str(Vcycle),' ',num2str(Reconst),' ',num2str(dbglvl)]);
- %Call an external executable file hmetis. e.g. hmetis 1.Graph 2 1 10 1 1 1 0 24
- P=load(['neighbors','.Graph.part.',num2str(Nparts)]);% results of paritioning
- [nb_RatingMatrix]=nb_center2(P,nb_RatingMatrix,k_EndUser);
-% The constructed hypergraph is partitioned into "k_EndUser" clusters. 
-% Now we should find the center of each cluster and get to aco 
-% Create User graph
-nF=k_EndUser;
+% %% Hypergraph section
+%  K=5;  %  parameter k in the SkNN, one can change it.
+%  C=2;   %  parameter cs the support count threshold, one can change it.
+%  RNNname=KNN2(neighbors,RatingMatrix,TrustNetwork,K,tempdis);
+%  system(['fpgrowth.exe -tm -s-',num2str(C),' ',RNNname,' ',RNNname,'.out']); %Call an external executable file fpgrowth.exe
+%  fid_RNNout=fopen([RNNname,'.out'],'r');
+%  fid_graph=fopen(['neighbors','.Graph'],'w+');
+%  fprintf(fid_graph,'                             \n');
+%  NUMedge=0;
+%  while ~feof(fid_RNNout)
+%      tline=fgetl(fid_RNNout);
+%      if tline==-1
+%          return;
+%      end
+%      index=strfind(tline,'(');
+%      newtline=[tline(index+1:end-1),' ',tline(1:index-2),'\n'];
+%      fprintf(fid_graph,newtline);
+%      NUMedge=NUMedge+1;
+%  end
+%  frewind(fid_graph);% set pointer to the start of the file
+%  fprintf(fid_graph,'%d %d 1',NUMedge,nF);%%% check
+%  fclose(fid_RNNout);
+%  fclose(fid_graph);
+%  Nparts=k_EndUser;% #############Number of partitions###############
+%  UBfactor=1;
+%  Nruns=10;  %default:10 range:1...10
+%  CType=5;   %default:1  range:1...5
+%  RType=3;   %default:1  range:1...3
+%  Vcycle=1;  %default:1  range:1...3
+%  Reconst=0; %default:0  range:0...1
+%  dbglvl=0; %range:0 or 24
+%  system(['hmetis ','neighbors','.Graph ',num2str(Nparts),' ',num2str(UBfactor),' ',num2str(Nruns),' ',num2str(CType),' ',num2str(RType),' ',num2str(Vcycle),' ',num2str(Reconst),' ',num2str(dbglvl)]);
+%  %Call an external executable file hmetis. e.g. hmetis 1.Graph 2 1 10 1 1 1 0 24
+%  P=load(['neighbors','.Graph.part.',num2str(Nparts)]);% results of paritioning
+%  [nbc_RatingMatrix,nbc_TrustNetwork]=nb_center(P,nb_RatingMatrix,nb_TrustNetwork,k_EndUser);
+% % The constructed hypergraph is partitioned into "k_EndUser" clusters. 
+% % Now we should find the center of each cluster and get to aco 
+% % Create User graph
 %% Step II – Weighing
 sim_all=zeros(nF,nF);
 %T_i_j=zeros(nF,nF);% trust statement among the user i and user j
 Degree2=sum(nb_TrustNetwork()'~=0);
 AvgDegree2=mean(Degree2);
 %[AllU,~]=size(TrustNetwork);
-%Dmax2=log(nF)/log(AvgDegree2);
-%W_i_j=zeros(nF,nF);
+Dmax2=log(nF)/log(AvgDegree2);
+W_i_j=zeros(nF,nF);
 for i=1:nF
     nRatingi=sum(nb_RatingMatrix(i,:)~=0);
     sumRatingi=sum(nb_RatingMatrix(i,:));
     avgi=sumRatingi/nRatingi;
-%     Disi=tempdis(:,neighbors(i));    % tempdis obtained in line 44
-%     T_i_j=(Dmax2-Disi+1)/Dmax2;
-%     T_i_j(isinf(T_i_j))=0;% Is it true?!
+    Disi=tempdis(:,neighbors(i));    % tempdis obtained in line 44
+    T_i_j=(Dmax2-Disi+1)/Dmax2;
+    T_i_j(isinf(T_i_j))=0;% Is it true?!
 
     for j=i+1:nF
         temp_i=nb_RatingMatrix(i,:);
@@ -170,22 +160,22 @@ for i=1:nF
         if isnan(sim_all(i,j))==1% It should be checked. Two users which there isnt any common elements between them.
             sim_all(i,j)=0;
         end
-%         if sim_all(i,j)+T_i_j(j)~=0 && sim_all(i,j)*T_i_j(j)~=0
-%             W_i_j(i,j)=2*sim_all(i,j)*T_i_j(j)/(sim_all(i,j)+T_i_j(j));
-%         elseif sim_all(i,j)==0 && T_i_j(j)~=0
-%             W_i_j(i,j)=T_i_j(j);
-%         elseif sim_all(i,j)~=0 && T_i_j(j)==0
-%             W_i_j(i,j)=sim_all(i,j);
-%         else
-%             'ggg';
-%         end
-%         if W_i_j(i,j)<0 % based on the comment of author
-%             W_i_j(i,j)=0;
-%         end
+        if sim_all(i,j)+T_i_j(j)~=0 && sim_all(i,j)*T_i_j(j)~=0
+            W_i_j(i,j)=2*sim_all(i,j)*T_i_j(j)/(sim_all(i,j)+T_i_j(j));
+        elseif sim_all(i,j)==0 && T_i_j(j)~=0
+            W_i_j(i,j)=T_i_j(j);
+        elseif sim_all(i,j)~=0 && T_i_j(j)==0
+            W_i_j(i,j)=sim_all(i,j);
+        else
+            'ggg';
+        end
+        if W_i_j(i,j)<0 % based on the comment of author
+            W_i_j(i,j)=0;
+        end
     end
 end
-sim_all=sim_all+sim_all';
-%% Hypergraph section
+W_i_j=W_i_j+W_i_j';
+% %% Hypergraph section
 %  K=5;  %  parameter k in the SkNN, one can change it.
 %  C=2;   %  parameter cs the support count threshold, one can change it.
 %  RNNname=KNN2(neighbors,RatingMatrix,TrustNetwork,K,tempdis);
@@ -220,29 +210,23 @@ sim_all=sim_all+sim_all';
 %  %Call an external executable file hmetis. e.g. hmetis 1.Graph 2 1 10 1 1 1 0 24
 %  P=load(['neighbors','.Graph.part.',num2str(Nparts)]);% results of paritioning
 %  nb_center();
-% The constructed hypergraph is partitioned into "k_EndUser" clusters. 
-% Now we should find the center of each cluster and get to aco 
-% Create User graph
+% % The constructed hypergraph is partitioned into "k_EndUser" clusters. 
+% % Now we should find the center of each cluster and get to aco 
+% % Create User graph
 %% Applying ACO
-W=sim_all;
+W=W_i_j;
 W(W<=0)=0.0001;  %Will be checked
-%W=1./W;
 [BestSol,BestAnt,tau]=aco(W,RatingMatrix(TargetUser,:),nb_RatingMatrix);
 %% Prediction
-%BestWeight=tau(BestAnt,:);
-BestL=length(BestSol.Tour);
-BestWeight=zeros(1,BestL-1);
-for b=1:BestL-1
-    BestWeight(b)=tau(BestSol.Tour(b),BestSol.Tour(b+1));
-end
+BestWeight=tau(BestAnt,:);
 [s,ind]=sort(BestWeight,'descend');
-for j=1:length(s)-1
+for j=1:length(s)
     sorted(j)=BestSol.Tour(ind(j));
 end
 temp=BestSol.Tour;
 % Selecting k users
-K_users=sorted(1:k_EndUser-1);
-K_weights=s(1:k_EndUser-1);
+K_users=sorted(1:k_EndUser);
+K_weights=s(1:k_EndUser);
 [~,nR]=size(nb_RatingMatrix);
 R_hat=zeros(1,nR);
 for i=1:nR
@@ -252,7 +236,6 @@ for i=1:nR
     M=sum(K_weights);
     R_hat(i)=L/M;
 end
-%R_hat=round(R_hat);
 %% Evaluation
 % Mean Average Error(MAE)
 TR=RatingMatrix(TargetUser,:);
